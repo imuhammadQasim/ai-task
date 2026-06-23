@@ -1,29 +1,54 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { AppProvider, useApp } from "@/lib/app-store";
+import { TopNav } from "@/components/top-nav";
+import { AuthView } from "@/components/views/auth-view";
+import { ChannelsView } from "@/components/views/channels-view";
+import { TasksView } from "@/components/views/tasks-view";
+import { BillingView } from "@/components/views/billing-view";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Your App" },
-      { name: "description", content: "Replace this with a one-sentence description of your app." },
-      { property: "og:title", content: "Your App" },
-      { property: "og:description", content: "Replace this with a one-sentence description of your app." },
+      { title: "PingFlow — AI Alert Automation" },
+      {
+        name: "description",
+        content:
+          "Describe alerts in plain English or Roman Urdu. Get pinged on WhatsApp, Messenger, or Email instantly.",
+      },
+      { property: "og:title", content: "PingFlow — AI Alert Automation" },
+      {
+        property: "og:description",
+        content:
+          "Multi-channel real-time alerts powered by natural language. Just $1/month.",
+      },
     ],
   }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
 function Index() {
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
+    <AppProvider>
+      <div className="min-h-screen bg-background text-foreground">
+        <TopNav />
+        <main>
+          <CurrentView />
+        </main>
+      </div>
+    </AppProvider>
   );
+}
+
+function CurrentView() {
+  const { view } = useApp();
+  switch (view) {
+    case "auth":
+      return <AuthView />;
+    case "channels":
+      return <ChannelsView />;
+    case "tasks":
+      return <TasksView />;
+    case "billing":
+      return <BillingView />;
+  }
 }
