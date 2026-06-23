@@ -47,29 +47,20 @@ export function TopNav() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-2">
-          <span
-            className={cn(
-              "hidden sm:inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium",
-              isAuthed ? "bg-success/10 text-success" : "bg-muted text-muted-foreground",
-            )}
-          >
-            <span
-              className={cn(
-                "h-1.5 w-1.5 rounded-full",
-                isAuthed ? "bg-success" : "bg-muted-foreground",
-              )}
-            />
-            {isAuthed ? "Signed in" : "Guest"}
-          </span>
-          <span
-            className={cn(
-              "hidden sm:inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium",
-              isSubscribed ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
-            )}
-          >
-            {isSubscribed ? "Pro" : "Free"}
-          </span>
+        <div className="flex items-center gap-3">
+          {isSubscribed ? (
+            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+              Pro Plan
+            </span>
+          ) : (
+            <button className="rounded-full border px-3 py-1 text-xs hover:bg-secondary ">
+              Upgrade
+            </button>
+          )}
+
+          <button className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary border-blue-600 border">
+            MQ
+          </button>
         </div>
       </div>
 
