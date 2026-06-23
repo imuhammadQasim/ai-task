@@ -27,8 +27,9 @@ export function TasksView() {
 
   const examples = [
     "Alert me when ETH gains 5% in 24h",
-    "Mujhe inform karo jab dollar rate 285 se zyada ho jaye",
-    "Notify when my GitHub repo gets a new issue",
+    "Mujhe inform karo jab dollar rate barhe",
+    // "Notify when my GitHub repo gets a new issue",
+    "Notify me with details the exact day a 2027 fully funded scholarship opens.",
   ];
 
   return (

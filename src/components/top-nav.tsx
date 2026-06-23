@@ -4,10 +4,10 @@ import { useApp } from "@/lib/app-store";
 import { cn } from "@/lib/utils";
 
 const NAV = [
-  { label: "Sign In", step: "01", to: "/login" },
-  { label: "Channels", step: "02", to: "/channels" },
-  { label: "Tasks", step: "03", to: "/tasks" },
-  { label: "Billing", step: "04", to: "/billing" },
+  { label: "Channels", step: "01", to: "/channels" },
+  { label: "Tasks", step: "02", to: "/tasks" },
+  { label: "Billing", step: "03", to: "/billing" },
+  // { label: "Profile", step: "04", to: "/login" },
 ];
 
 export function TopNav() {
@@ -28,7 +28,7 @@ export function TopNav() {
         </Link>
 
         <nav className="hidden md:flex items-center gap-1 rounded-full border border-border bg-secondary p-1">
-          {NAV.map((item) => (
+          {NAV.map((item, index) => (
             <Link
               key={item.to}
               to={item.to}
@@ -40,7 +40,7 @@ export function TopNav() {
               )}
             >
               <span className="mr-1.5 text-[10px] font-mono text-muted-foreground">
-                {item.step}
+                {String(index + 1).padStart(2, "0")}
               </span>
               {item.label}
             </Link>
