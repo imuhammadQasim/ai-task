@@ -1,0 +1,42 @@
+type ApiOptions = Omit<RequestInit, "body"> & {
+  body?: unknown;
+  token?: string;
+};
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ?? "";
+
+async function apiRequest<T>(path: string, options: ApiOptions = {}): Promise<T> {
+  const { body, token, headers, ...requestOptions } = options;
+  const url = path.startsWith("http") ? path : `${API_BASE_URL}${path}`;
+
+  const response = await fetch(url, {
+    ...requestOptions,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...headers,
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data?.message ?? "Request failed. Please try again.");
+  }
+
+  return data as T;
+}
+
+export const Fetch = {
+  get: <T>(path: string, options?: ApiOptions) =>
+    apiRequest<T>(path, { ...options, method: "GET" }),
+  post: <T>(path: string, body?: unknown, options?: ApiOptions) =>
+    apiRequest<T>(path, { ...options, method: "POST", body }),
+  put: <T>(path: string, body?: unknown, options?: ApiOptions) =>
+    apiRequest<T>(path, { ...options, method: "PUT", body }),
+  patch: <T>(path: string, body?: unknown, options?: ApiOptions) =>
+    apiRequest<T>(path, { ...options, method: "PATCH", body }),
+  delete: <T>(path: string, body?: unknown, options?: ApiOptions) =>
+    apiRequest<T>(path, { ...options, method: "DELETE", body }),
+};

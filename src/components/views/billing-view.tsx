@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { useApp } from "@/lib/app-store";
 import { cn } from "@/lib/utils";
 
 /** Flow 4 — Subscription & payment. */
 export function BillingView() {
-  const { isSubscribed, setSubscribed, setView } = useApp();
+  const navigate = useNavigate();
+  const { isSubscribed, setSubscribed } = useApp();
   const [card, setCard] = useState("");
   const [exp, setExp] = useState("");
   const [cvc, setCvc] = useState("");
@@ -21,7 +23,7 @@ export function BillingView() {
   };
 
   if (isSubscribed) {
-    return <SuccessScreen onContinue={() => setView("tasks")} />;
+    return <SuccessScreen onContinue={() => navigate({ to: "/tasks" })} />;
   }
 
   return (
@@ -33,9 +35,7 @@ export function BillingView() {
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-foreground">
           Activate your plan
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          One simple price. Cancel anytime.
-        </p>
+        <p className="mt-2 text-sm text-muted-foreground">One simple price. Cancel anytime.</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-5">
@@ -48,18 +48,12 @@ export function BillingView() {
               </svg>
               Most Popular
             </div>
-            <h2 className="mt-3 text-xl font-semibold text-foreground">
-              Simple Power Plan
-            </h2>
+            <h2 className="mt-3 text-xl font-semibold text-foreground">Simple Power Plan</h2>
             <div className="mt-3 flex items-baseline gap-1">
-              <span className="text-5xl font-bold tracking-tight text-foreground">
-                $1.00
-              </span>
+              <span className="text-5xl font-bold tracking-tight text-foreground">$1.00</span>
               <span className="text-sm text-muted-foreground">/ month</span>
             </div>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Billed monthly. No setup fees.
-            </p>
+            <p className="mt-2 text-sm text-muted-foreground">Billed monthly. No setup fees.</p>
 
             <ul className="mt-6 space-y-3 text-sm text-foreground">
               {[
@@ -71,7 +65,14 @@ export function BillingView() {
               ].map((f) => (
                 <li key={f} className="flex items-start gap-2.5">
                   <span className="mt-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-success/15 text-success">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                    <svg
+                      width="10"
+                      height="10"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                    >
                       <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </span>
@@ -103,9 +104,7 @@ export function BillingView() {
             className="rounded-2xl border border-border bg-card p-6 shadow-card sm:p-8"
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold text-foreground">
-                Payment details
-              </h3>
+              <h3 className="text-base font-semibold text-foreground">Payment details</h3>
               <div className="flex gap-1.5">
                 <CardLogo label="VISA" color="bg-[#1A1F71]" />
                 <CardLogo label="MC" color="bg-[#EB001B]" />
@@ -185,8 +184,8 @@ export function BillingView() {
               <div className="flex items-start gap-2 rounded-lg border border-border bg-secondary p-3 text-xs text-muted-foreground">
                 <LockIcon />
                 <span>
-                  Your payment is encrypted end-to-end. PingFlow never stores raw card
-                  data — processing is handled exclusively by Stripe.
+                  Your payment is encrypted end-to-end. PingFlow never stores raw card data —
+                  processing is handled exclusively by Stripe.
                 </span>
               </div>
 
@@ -210,8 +209,7 @@ export function BillingView() {
               </button>
 
               <p className="text-center text-[11px] text-muted-foreground">
-                By subscribing you agree to our Terms & Privacy Policy. Cancel anytime in
-                Settings.
+                By subscribing you agree to our Terms & Privacy Policy. Cancel anytime in Settings.
               </p>
             </div>
           </form>
@@ -244,16 +242,20 @@ function SuccessScreen({ onContinue }: { onContinue: () => void }) {
   return (
     <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-md flex-col items-center justify-center px-4 py-16 text-center">
       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-success/15 text-success">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+        <svg
+          width="32"
+          height="32"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+        >
           <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </div>
-      <h2 className="mt-6 text-2xl font-semibold text-foreground">
-        You're on the Power Plan
-      </h2>
+      <h2 className="mt-6 text-2xl font-semibold text-foreground">You're on the Power Plan</h2>
       <p className="mt-2 text-sm text-muted-foreground">
-        Subscription activated. Your alerts are now unlimited and your dashboard is fully
-        unlocked.
+        Subscription activated. Your alerts are now unlimited and your dashboard is fully unlocked.
       </p>
       <div className="mt-6 w-full rounded-lg border border-border bg-card p-4 text-left shadow-card">
         <div className="flex justify-between text-sm">
@@ -308,7 +310,14 @@ function CardLogo({ label, color }: { label: string; color: string }) {
 
 function LockIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
       <rect x="4" y="11" width="16" height="10" rx="2" />
       <path d="M8 11V7a4 4 0 0 1 8 0v4" />
     </svg>
@@ -316,7 +325,14 @@ function LockIcon() {
 }
 function ShieldIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
     </svg>
   );
@@ -332,7 +348,12 @@ function Spinner() {
   return (
     <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none">
       <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
-      <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+      <path
+        d="M22 12a10 10 0 0 1-10 10"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }

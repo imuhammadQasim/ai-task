@@ -1,9 +1,5 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, type ReactNode } from "react";
-
-/**
- * Global mock app state shared across the 4 flows.
- * Uses plain useState (per spec) instead of a heavy state manager.
- */
 
 export type ChannelId = "whatsapp" | "messenger" | "email";
 
@@ -21,12 +17,7 @@ export type Task = {
   createdAt: string;
 };
 
-export type View = "auth" | "channels" | "tasks" | "billing";
-
 type AppState = {
-  view: View;
-  setView: (v: View) => void;
-
   isAuthed: boolean;
   setAuthed: (v: boolean) => void;
 
@@ -43,7 +34,6 @@ type AppState = {
 const AppCtx = createContext<AppState | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [view, setView] = useState<View>("auth");
   const [isAuthed, setAuthed] = useState(false);
   const [isSubscribed, setSubscribed] = useState(false);
 
@@ -92,8 +82,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <AppCtx.Provider
       value={{
-        view,
-        setView,
         isAuthed,
         setAuthed,
         isSubscribed,

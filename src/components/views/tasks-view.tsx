@@ -1,25 +1,22 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { useApp, type ChannelId } from "@/lib/app-store";
 import { cn } from "@/lib/utils";
 
 /** Flow 3 — Dynamic task creator + active task grid. */
 export function TasksView() {
-  const { channels, tasks, addTask, isSubscribed, setView } = useApp();
+  const navigate = useNavigate();
+  const { channels, tasks, addTask, isSubscribed } = useApp();
   const [prompt, setPrompt] = useState("");
   const [selected, setSelected] = useState<ChannelId[]>(
     channels.filter((c) => c.connected).map((c) => c.id),
   );
   const [showHistory, setShowHistory] = useState(false);
 
-  const activeChannels = useMemo(
-    () => channels.filter((c) => c.connected),
-    [channels],
-  );
+  const activeChannels = useMemo(() => channels.filter((c) => c.connected), [channels]);
 
   const toggleSel = (id: ChannelId) =>
-    setSelected((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +52,7 @@ export function TasksView() {
             </div>
           </div>
           <button
-            onClick={() => setView("billing")}
+            onClick={() => navigate({ to: "/billing" })}
             className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover"
           >
             Upgrade — $1/mo
@@ -72,8 +69,8 @@ export function TasksView() {
           What should we watch for you?
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Describe your alert in plain English or Roman Urdu. Our AI translates intent
-          into a live monitoring rule.
+          Describe your alert in plain English or Roman Urdu. Our AI translates intent into a live
+          monitoring rule.
         </p>
 
         <form onSubmit={submit} className="mt-6">
@@ -111,13 +108,11 @@ export function TasksView() {
           {/* Channel pills */}
           <div className="mt-5">
             <div className="mb-2 flex items-center justify-between">
-              <div className="text-xs font-semibold text-foreground">
-                Deliver alerts to:
-              </div>
+              <div className="text-xs font-semibold text-foreground">Deliver alerts to:</div>
               {activeChannels.length === 0 && (
                 <button
                   type="button"
-                  onClick={() => setView("channels")}
+                  onClick={() => navigate({ to: "/channels" })}
                   className="text-xs font-medium text-primary hover:underline"
                 >
                   + Connect a channel
@@ -138,9 +133,9 @@ export function TasksView() {
                       "inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors",
                       disabled &&
                         "cursor-not-allowed border-dashed border-border bg-secondary text-muted-foreground opacity-60",
-                      !disabled && isActive &&
-                        "border-primary bg-primary text-primary-foreground",
-                      !disabled && !isActive &&
+                      !disabled && isActive && "border-primary bg-primary text-primary-foreground",
+                      !disabled &&
+                        !isActive &&
                         "border-border bg-card text-foreground hover:bg-secondary",
                     )}
                   >
@@ -177,7 +172,14 @@ export function TasksView() {
             onClick={() => setShowHistory((v) => !v)}
             className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2 text-xs font-medium text-foreground hover:bg-secondary"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
               <path d="M3 3v5h5" />
             </svg>
