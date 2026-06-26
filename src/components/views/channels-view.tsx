@@ -145,7 +145,7 @@ export function ChannelsView() {
             You can always reconfigure channels later from Settings.
           </div>
         </div>
-        <button onClick={() => navigate({ to: "/tasks" })} className="btn-primary !w-auto px-6">
+        <button onClick={() => navigate({ to: "/tasks" })} className="btn-primary `!w-auto` px-6">
           Continue to Tasks →
         </button>
       </div>

@@ -8,10 +8,20 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import { ClerkProvider, useAuth } from "@clerk/clerk-react";
 
 import appCss from "../styles.css?url";
 import { reportAppError } from "../lib/error-reporting";
 import { AppProvider } from "../lib/app-store";
+import { setClerkGetToken } from "../helpers/fetch-wrapper";
+
+function ClerkTokenBridge({ children }: { children: ReactNode }) {
+  const { getToken } = useAuth();
+  useEffect(() => {
+    setClerkGetToken(getToken);
+  }, [getToken]);
+  return <>{children}</>;
+}
 
 function NotFoundComponent() {
   return (
@@ -127,13 +137,22 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+
+  if (!publishableKey) {
+    console.warn("Clerk Publishable Key is missing in environment variables!");
+  }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <AppProvider>
-        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-        <Outlet />
-      </AppProvider>
-    </QueryClientProvider>
+    <ClerkProvider publishableKey={publishableKey} afterSignOutUrl="/">
+      <ClerkTokenBridge>
+        <QueryClientProvider client={queryClient}>
+          <AppProvider>
+            {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+            <Outlet />
+          </AppProvider>
+        </QueryClientProvider>
+      </ClerkTokenBridge>
+    </ClerkProvider>
   );
 }

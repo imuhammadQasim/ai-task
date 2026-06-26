@@ -1,5 +1,5 @@
-/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, type ReactNode } from "react";
+import { useAuth } from "@clerk/clerk-react";
 
 export type ChannelId = "whatsapp" | "messenger" | "email";
 
@@ -30,11 +30,12 @@ type AppState = {
   tasks: Task[];
   addTask: (prompt: string, channels: ChannelId[]) => void;
 };
-
 const AppCtx = createContext<AppState | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [isAuthed, setAuthed] = useState(false);
+  const { isSignedIn } = useAuth();
+  const isAuthed = !!isSignedIn;
+  const setAuthed = () => {};
   const [isSubscribed, setSubscribed] = useState(false);
 
   const [channels, setChannels] = useState<Channel[]>([

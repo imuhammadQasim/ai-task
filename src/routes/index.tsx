@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { AuthView } from "@/components/views/auth-view";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
+import { SignedIn, SignedOut } from "@clerk/clerk-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -21,5 +21,14 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  return <AuthView initialStep="login" />;
+  return (
+    <>
+      <SignedIn>
+        <Navigate to="/channels" replace />
+      </SignedIn>
+      <SignedOut>
+        <Navigate to="/login" replace />
+      </SignedOut>
+    </>
+  );
 }
