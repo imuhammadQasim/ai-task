@@ -1,16 +1,56 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useApp, type ChannelId } from "@/lib/app-store";
+import { useClerk, useUser } from "@clerk/clerk-react";
+import { Fetch } from "@/helpers/fetch-wrapper";
 import { cn } from "@/lib/utils";
+
+// ─── API helper ──────────────────────────────────────────────────────────────
+const API_SEND_TEST_ALERT = "api/notifications/send-test";
 
 /** Flow 2 — Channels onboarding. */
 export function ChannelsView() {
   const navigate = useNavigate();
   const { channels, toggleChannel } = useApp();
   const [qrOpen, setQrOpen] = useState(false);
+
+  // Email-specific states
   const [emailSent, setEmailSent] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+
+  const { user } = useUser();
+  const userEmail = user?.primaryEmailAddress?.emailAddress;
+
+  useEffect(() => {
+    if (userEmail && !channels[2].connected) {
+      toggleChannel("email", true);
+    }
+  }, [userEmail]);
 
   const connectedCount = channels.filter((c) => c.connected).length;
+
+  // ── Real send-test handler ────────────────────────────────────────────────
+  const handleSendTestAlert = async () => {
+    if (!userEmail || emailLoading) return;
+
+    setEmailLoading(true);
+    setEmailError(null);
+    setEmailSent(false);
+
+    try {
+      await Fetch.post(API_SEND_TEST_ALERT, { email: userEmail, channel: "email" });
+      setEmailSent(true);
+      // Reset success badge after 2.5 s
+      setTimeout(() => setEmailSent(false), 2500);
+    } catch (err) {
+      setEmailError(
+        err instanceof Error ? err.message : "Failed to send test alert. Please try again.",
+      );
+    } finally {
+      setEmailLoading(false);
+    }
+  };
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
@@ -40,7 +80,7 @@ export function ChannelsView() {
 
       {/* Cards */}
       <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-        {/* WhatsApp */}
+        {/* WhatsApp — unchanged */}
         <ChannelCard
           id="whatsapp"
           title="WhatsApp"
@@ -65,7 +105,7 @@ export function ChannelsView() {
           connected={channels[0].connected}
         />
 
-        {/* Messenger */}
+        {/* Messenger — unchanged */}
         <ChannelCard
           id="messenger"
           title="Facebook Messenger"
@@ -96,7 +136,7 @@ export function ChannelsView() {
           connected={channels[1].connected}
         />
 
-        {/* Email */}
+        {/* Email — fully functional */}
         <ChannelCard
           id="email"
           title="Email Notification"
@@ -116,21 +156,59 @@ export function ChannelsView() {
           }
           action={
             <div className="space-y-2">
+              {/* Verified email pill */}
               <div className="flex items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-2">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-success text-[10px] text-success-foreground">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-success text-[10px] text-success-foreground">
                   ✓
                 </span>
-                <span className="truncate text-sm text-foreground">ayesha@company.com</span>
+                <span className="truncate text-sm text-foreground">{userEmail}</span>
               </div>
+
+              {/* Send test alert button — shows loading / sent / idle states */}
               <button
-                onClick={() => {
-                  setEmailSent(true);
-                  setTimeout(() => setEmailSent(false), 2500);
-                }}
-                className="btn-secondary"
+                onClick={handleSendTestAlert}
+                disabled={emailLoading || emailSent}
+                className={cn(
+                  "btn-secondary relative",
+                  (emailLoading || emailSent) && "cursor-not-allowed opacity-70",
+                )}
               >
-                {emailSent ? "Test alert sent ✓" : "Send Test Alert"}
+                {emailLoading ? (
+                  <span className="flex items-center gap-2">
+                    <svg
+                      className="h-4 w-4 animate-spin"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M21 12a9 9 0 1 1-6.219-8.56" strokeLinecap="round" />
+                    </svg>
+                    Sending…
+                  </span>
+                ) : emailSent ? (
+                  "Test alert sent ✓"
+                ) : (
+                  "Send Test Alert"
+                )}
               </button>
+
+              {/* Inline error message */}
+              {emailError && (
+                <p className="flex items-start gap-1.5 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                  <svg
+                    className="mt-px h-3.5 w-3.5 shrink-0"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 8v4m0 4h.01" strokeLinecap="round" />
+                  </svg>
+                  {emailError}
+                </p>
+              )}
             </div>
           }
           connected={channels[2].connected}
@@ -145,12 +223,12 @@ export function ChannelsView() {
             You can always reconfigure channels later from Settings.
           </div>
         </div>
-        <button onClick={() => navigate({ to: "/tasks" })} className="btn-primary `!w-auto` px-6">
+        <button onClick={() => navigate({ to: "/tasks" })} className="btn-primary !w-auto px-6">
           Continue to Tasks →
         </button>
       </div>
 
-      {/* QR Modal */}
+      {/* QR Modal — unchanged */}
       {qrOpen && (
         <QRModal
           onClose={() => setQrOpen(false)}
@@ -196,6 +274,8 @@ export function ChannelsView() {
     </div>
   );
 }
+
+// ─── Sub-components (unchanged) ───────────────────────────────────────────────
 
 function ChannelCard({
   title,

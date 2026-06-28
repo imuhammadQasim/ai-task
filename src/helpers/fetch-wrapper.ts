@@ -9,12 +9,12 @@ export function setClerkGetToken(fn: () => Promise<string | null>) {
   clerkGetToken = fn;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ?? "";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 async function apiRequest<T>(path: string, options: ApiOptions = {}): Promise<T> {
   const { body, token, headers, ...requestOptions } = options;
   const url = path.startsWith("http") ? path : `${API_BASE_URL}${path}`;
-
+  console.log("url is here ", API_BASE_URL)
   let authToken = token;
   if (!authToken && clerkGetToken) {
     try {
