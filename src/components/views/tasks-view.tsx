@@ -1,36 +1,137 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { useApp, type ChannelId } from "@/lib/app-store";
+import { useApp } from "@/lib/app-store";
 import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import {
+  taskService,
+  type TaskType,
+  type MonitorMode,
+  type NotificationChannel,
+  type CreateTaskPayload,
+} from "@/services/task-service";
 
-/** Flow 3 — Dynamic task creator + active task grid. */
+const MIN_SCHEDULE_MINS = 60;
+
+/** Flow 3 — Explicit task creator (no LLM parsing) + active task grid. */
 export function TasksView() {
   const navigate = useNavigate();
-  const { channels, tasks, addTask, isSubscribed } = useApp();
-  const [prompt, setPrompt] = useState("");
-  const [selected, setSelected] = useState<ChannelId[]>(
-    channels.filter((c) => c.connected).map((c) => c.id),
-  );
+  const { tasks, isSubscribed } = useApp();
   const [showHistory, setShowHistory] = useState(false);
 
-  const activeChannels = useMemo(() => channels.filter((c) => c.connected), [channels]);
+  // Form state
+  const [taskType, setTaskType] = useState<TaskType>("web_monitor");
+  const [monitorMode, setMonitorMode] = useState<MonitorMode>("url");
+  const [notificationChannel, setNotificationChannel] = useState<NotificationChannel>("email");
+  const [scheduleMins, setScheduleMins] = useState<number>(MIN_SCHEDULE_MINS);
+  const [url, setUrl] = useState("");
+  const [condition, setCondition] = useState("");
+  const [topic, setTopic] = useState("");
+  const [reminderDate, setReminderDate] = useState("");
+  const [message, setMessage] = useState("");
 
-  const toggleSel = (id: ChannelId) =>
-    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!prompt.trim() || selected.length === 0) return;
-    addTask(prompt.trim(), selected);
-    setPrompt("");
+  // Clear fields that don't belong to the newly-selected task_type so stale
+  // values never leak into the submitted payload.
+  const handleTaskTypeChange = (value: TaskType) => {
+    setTaskType(value);
+    setError(null);
+    setSuccess(null);
+    // Web-monitor-only fields
+    setUrl("");
+    setCondition("");
+    setTopic("");
+    // Date-reminder-only fields
+    setReminderDate("");
+    setMessage("");
   };
 
-  const examples = [
-    "Alert me when ETH gains 5% in 24h",
-    "Mujhe inform karo jab dollar rate barhe",
-    // "Notify when my GitHub repo gets a new issue",
-    "Notify me with details the exact day a 2027 fully funded scholarship opens.",
-  ];
+  // Clear the other mode's fields when monitor_mode flips.
+  const handleMonitorModeChange = (value: MonitorMode) => {
+    setMonitorMode(value);
+    setError(null);
+    setSuccess(null);
+    if (value === "url") {
+      setTopic("");
+    } else {
+      setUrl("");
+      setCondition("");
+    }
+  };
+
+  const buildPayload = (): CreateTaskPayload => {
+    if (taskType === "web_monitor") {
+      // Mirror the backend's 60-minute floor on the client.
+      const mins = scheduleMins < MIN_SCHEDULE_MINS ? MIN_SCHEDULE_MINS : scheduleMins;
+      if (monitorMode === "url") {
+        return {
+          task_type: "web_monitor",
+          monitor_mode: "url",
+          notification_channel: notificationChannel,
+          schedule_mins: mins,
+          url: url.trim(),
+          condition: condition.trim(),
+        };
+      }
+      return {
+        task_type: "web_monitor",
+        monitor_mode: "topic",
+        notification_channel: notificationChannel,
+        schedule_mins: mins,
+        topic: topic.trim(),
+      };
+    }
+    // date_reminder
+    return {
+      task_type: "date_reminder",
+      notification_channel: notificationChannel,
+      reminder_date: reminderDate,
+      message: message.trim(),
+    };
+  };
+
+  const isValid = useMemo(() => {
+    if (taskType === "web_monitor") {
+      if (monitorMode === "url") return !!url.trim() && !!condition.trim();
+      return !!topic.trim();
+    }
+    return !!reminderDate && !!message.trim();
+  }, [taskType, monitorMode, url, condition, topic, reminderDate, message]);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+    if (!isValid) return;
+
+    setSubmitting(true);
+    try {
+      const created = await taskService.createTask(buildPayload());
+      setSuccess(`Task #${created.id} created and now ${created.status}.`);
+      // Reset mode-specific inputs after a successful create.
+      setUrl("");
+      setCondition("");
+      setTopic("");
+      setReminderDate("");
+      setMessage("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create task.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
@@ -61,7 +162,7 @@ export function TasksView() {
         </div>
       )}
 
-      {/* Hero composer */}
+      {/* Composer */}
       <section className="rounded-2xl border border-border bg-card p-6 shadow-card sm:p-8">
         <p className="text-xs font-semibold uppercase tracking-wider text-primary">
           Step 03 — Create Task
@@ -70,92 +171,166 @@ export function TasksView() {
           What should we watch for you?
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Describe your alert in plain English or Roman Urdu. Our AI translates intent into a live
-          monitoring rule.
+          Choose a task type and fill in the details. No guessing — you tell us exactly what to do.
         </p>
 
-        <form onSubmit={submit} className="mt-6">
-          <div className="rounded-xl border border-border bg-background focus-within:border-primary focus-within:shadow-[var(--shadow-focus)] transition">
-            <textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              rows={3}
-              placeholder="e.g. Mujhe batao jab gold ka rate 250,000 per tola se neeche jaye…"
-              className="w-full resize-none rounded-xl bg-transparent px-4 py-3.5 text-base text-foreground placeholder:text-muted-foreground focus:outline-none"
-            />
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-3 py-2.5">
-              <div className="flex flex-wrap gap-1.5">
-                {examples.map((ex) => (
-                  <button
-                    key={ex}
-                    type="button"
-                    onClick={() => setPrompt(ex)}
-                    className="rounded-md border border-border bg-secondary px-2.5 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                  >
-                    {ex}
-                  </button>
-                ))}
-              </div>
-              <button
-                type="submit"
-                disabled={!prompt.trim() || selected.length === 0}
-                className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Create Task →
-              </button>
-            </div>
+        <form onSubmit={submit} className="mt-6 space-y-6">
+          {/* Task type selector */}
+          <div className="grid gap-2">
+            <Label htmlFor="task-type">Task type</Label>
+            <Select value={taskType} onValueChange={(v) => handleTaskTypeChange(v as TaskType)}>
+              <SelectTrigger id="task-type" className="w-full sm:w-72">
+                <SelectValue placeholder="Select a task type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="web_monitor">Web Monitor</SelectItem>
+                <SelectItem value="date_reminder">Date Reminder</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          {/* Channel pills */}
-          <div className="mt-5">
-            <div className="mb-2 flex items-center justify-between">
-              <div className="text-xs font-semibold text-foreground">Deliver alerts to:</div>
-              {activeChannels.length === 0 && (
-                <button
-                  type="button"
-                  onClick={() => navigate({ to: "/channels" })}
-                  className="text-xs font-medium text-primary hover:underline"
+          {/* web_monitor fields */}
+          {taskType === "web_monitor" && (
+            <div className="space-y-6 rounded-xl border border-border bg-background p-4 sm:p-5">
+              {/* monitor_mode selector */}
+              <div className="grid gap-2">
+                <Label>Monitor mode</Label>
+                <RadioGroup
+                  value={monitorMode}
+                  onValueChange={(v) => handleMonitorModeChange(v as MonitorMode)}
+                  className="flex flex-col gap-2 sm:flex-row sm:gap-6"
                 >
-                  + Connect a channel
-                </button>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {channels.map((ch) => {
-                const isActive = selected.includes(ch.id);
-                const disabled = !ch.connected;
-                return (
-                  <button
-                    key={ch.id}
-                    type="button"
-                    disabled={disabled}
-                    onClick={() => toggleSel(ch.id)}
-                    className={cn(
-                      "inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors",
-                      disabled &&
-                        "cursor-not-allowed border-dashed border-border bg-secondary text-muted-foreground opacity-60",
-                      !disabled && isActive && "border-primary bg-primary text-primary-foreground",
-                      !disabled &&
-                        !isActive &&
-                        "border-border bg-card text-foreground hover:bg-secondary",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "h-1.5 w-1.5 rounded-full",
-                        isActive ? "bg-primary-foreground" : "bg-muted-foreground",
-                      )}
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="url" id="mode-url" />
+                    <Label htmlFor="mode-url" className="font-normal">
+                      Watch a specific URL
+                    </Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="topic" id="mode-topic" />
+                    <Label htmlFor="mode-topic" className="font-normal">
+                      Track a topic / question
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {monitorMode === "url" ? (
+                <>
+                  <div className="grid gap-2">
+                    <Label htmlFor="url">URL to monitor</Label>
+                    <Input
+                      id="url"
+                      type="url"
+                      value={url}
+                      onChange={(e) => setUrl(e.target.value)}
+                      placeholder="https://example.com/pricing"
                     />
-                    {ch.name}
-                    {disabled && (
-                      <span className="ml-1 rounded bg-background px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                        not linked
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="condition">Condition (what change to watch for)</Label>
+                    <Input
+                      id="condition"
+                      value={condition}
+                      onChange={(e) => setCondition(e.target.value)}
+                      placeholder="e.g. the price drops below $50"
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="grid gap-2">
+                  <Label htmlFor="topic">Topic / question</Label>
+                  <Input
+                    id="topic"
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                    placeholder="e.g. Is there a new fully-funded 2027 scholarship open?"
+                  />
+                </div>
+              )}
+
+              {/* schedule interval (both modes) */}
+              <div className="grid gap-2">
+                <Label htmlFor="schedule">Check every (minutes)</Label>
+                <Input
+                  id="schedule"
+                  type="number"
+                  min={MIN_SCHEDULE_MINS}
+                  value={scheduleMins}
+                  onChange={(e) => setScheduleMins(Number(e.target.value))}
+                  onBlur={() => {
+                    if (scheduleMins < MIN_SCHEDULE_MINS) setScheduleMins(MIN_SCHEDULE_MINS);
+                  }}
+                  className="w-full sm:w-48"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Minimum {MIN_SCHEDULE_MINS} minutes.
+                </p>
+              </div>
             </div>
+          )}
+
+          {/* date_reminder fields */}
+          {taskType === "date_reminder" && (
+            <div className="space-y-6 rounded-xl border border-border bg-background p-4 sm:p-5">
+              <div className="grid gap-2">
+                <Label htmlFor="reminder-date">Reminder date</Label>
+                <Input
+                  id="reminder-date"
+                  type="date"
+                  value={reminderDate}
+                  onChange={(e) => setReminderDate(e.target.value)}
+                  className="w-full sm:w-48"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="message">Message</Label>
+                <Input
+                  id="message"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="e.g. Submit the scholarship application today"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* notification channel (all types) */}
+          <div className="grid gap-2">
+            <Label htmlFor="channel">Notify via</Label>
+            <Select
+              value={notificationChannel}
+              onValueChange={(v) => setNotificationChannel(v as NotificationChannel)}
+            >
+              <SelectTrigger id="channel" className="w-full sm:w-72">
+                <SelectValue placeholder="Select a channel" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="email">Email</SelectItem>
+                <SelectItem value="messenger">Facebook Messenger</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {error && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
+              {error}
+            </div>
+          )}
+          {success && (
+            <div className="rounded-lg border border-success/30 bg-success/10 px-4 py-2.5 text-sm text-success">
+              {success}
+            </div>
+          )}
+
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              disabled={!isValid || submitting}
+              className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {submitting ? "Creating…" : "Create Task →"}
+            </button>
           </div>
         </form>
       </section>
@@ -210,7 +385,7 @@ export function TasksView() {
                           key={c}
                           className="rounded-md bg-secondary px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
                         >
-                          {channels.find((x) => x.id === c)?.name}
+                          {c}
                         </span>
                       ))}
                     </div>
@@ -243,7 +418,7 @@ export function TasksView() {
                       key={c}
                       className="rounded-md bg-secondary px-2 py-0.5 text-[11px] text-muted-foreground"
                     >
-                      {channels.find((x) => x.id === c)?.name}
+                      {c}
                     </span>
                   ))}
                 </div>
